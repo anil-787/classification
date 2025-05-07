@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Patent String Formatter</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 2rem;
+      background-color: #e9f5e9;
+      color: #333;
+    }
+    h1 { color: #2e7d32; }
+    label { font-weight: bold; display: block; margin-top: 1rem; }
+    #inputString {
+      width: 30%;
+      min-height: 60px;
+      resize: both;
+      padding: 10px;
+      font-size: 16px;
+      font-family: monospace;
+      border: 1px solid #ccc;
+      margin-top: 0.5rem;
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 1rem;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+    button:hover { background-color: #388e3c; }
+    .output, .text-box-container, #formattedBox {
+      display: none;
+      margin-top: 2rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      table-layout: fixed;
+    }
+    th, td {
+      border: 1px solid #aaa;
+      padding: 10px;
+      text-align: left;
+      word-wrap: break-word;
+    }
+    th { background-color: #c8e6c9; }
+    th.shrink, td.shrink { width: 70px; white-space: nowrap; overflow: hidden; }
+    td.definition-col {
+      resize: horizontal;
+      overflow: auto;
+      min-width: 150px;
+      max-width: 400px;
+    }
+    tr.ipc-row { background-color: #e3f2fd; }
+    tr.cpc-row { background-color: #fff8e1; }
+    a.verify-link {
+      color: #1565c0;
+      text-decoration: underline;
+    }
+    .text-box-container {
+      display: flex;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+    .text-box {
+      flex: 1;
+    }
+    .text-box textarea {
+      width: 100%;
+      height: 60px;
+      resize: vertical;
+      background-color: #f9f9f9;
+      border: none;
+      outline: none;
+      font-family: monospace;
+      font-size: 18px;
+      padding: 10px;
+    }
+    .copy-button {
+      margin-top: 0.5rem;
+      font-size: 14px;
+    }
+    input[type="checkbox"] {
+      transform: scale(1.4);
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <label for="inputString">Enter your raw patent string:</label>
+  <textarea id="inputString" placeholder="e.g., G06Q50/02G06N20/00G06Q10/04..."></textarea>
+  <br>
+  <button onclick="pasteFromClipboard()">Paste from Clipboard</button>
+  <button onclick="formatPatentString()">Format String</button>
+
+  <div class="output" id="tableBox"></div>
+
+  <div id="formattedBox">
+    <h3>Formatted Strings</h3>
+    <textarea id="formattedStrings" readonly></textarea>
+  </div>
+
+  <div class="text-box-container" id="textAreas">
+    <div class="text-box">
+      <h3>Selected IPC Codes</h3>
+      <textarea id="ipcBox" readonly></textarea>
+      <br>
+      <button class="copy-button" onclick="copyToClipboard('ipcBox')">Copy IPC Codes</button>
+    </div>
+    <div class="text-box">
+      <h3>Selected CPC Codes</h3>
+      <textarea id="cpcBox" readonly></textarea>
+      <br>
+      <button class="copy-button" onclick="copyToClipboard('cpcBox')">Copy CPC Codes</button>
+    </div>
+  </div>
+
+  <script>
+    let ipcSelected = [];
+    let cpcSelected = [];
+
+    async function pasteFromClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        document.getElementById("inputString").value = text;
+      } catch (err) {
+        alert("Clipboard access failed. Use HTTPS or allow clipboard permissions.");
+        console.error(err);
+      }
+    }
+
+    async function formatPatentString() {
+      let input = document.getElementById("inputString").value.toUpperCase().replace(/\s+/g, '');
+      const matches = input.match(/[A-Z]\d{2}[A-Z]\d+\/\d+(?:\d*)?/g);
+
+      document.getElementById("inputString").value = '';
+      document.getElementById("formattedStrings").value = matches ? matches.join(', ') : '';
+
+      if (!matches || matches.length === 0) {
+        document.getElementById("tableBox").innerHTML = "<p>No valid patterns found.</p>";
+        return;
+      }
+
+      try {
+        const [data1, data2] = await Promise.all([
+          fetch('1.json').then(res => res.json()),
+          fetch('2.json').then(res => res.json())
+        ]);
+        const combinedData = [...data1, ...data2];
+        generateResultsTable(matches, combinedData);
+        document.getElementById("tableBox").style.display = 'block';
+        document.getElementById("textAreas").style.display = 'flex';
+        document.getElementById("formattedBox").style.display = 'block';
+      } catch (err) {
+        console.error("JSON load error", err);
+        document.getElementById("tableBox").innerHTML = "<p>Error loading code definitions.</p>";
+      }
+    }
+
+    function generateResultsTable(codes, jsonData) {
+      let html = `
+        <table>
+          <tr>
+            <th class="shrink">Select</th>
+            <th class="shrink">Code</th>
+            <th class="shrink">Status</th>
+            <th class="shrink">Type</th>
+            <th class="shrink">Level</th>
+            <th>Definition</th>
+            <th class="shrink">Verify</th>
+          </tr>`;
+
+      ipcSelected = [];
+      cpcSelected = [];
+
+      codes.forEach(code => {
+        const match = jsonData.find(item => item.CODE === code);
+        const rowId = `row-${code.replace(/[^\w]/g, '')}`;
+
+        if (match) {
+          const rowClass = match.TYPE === "IPC" ? "ipc-row" : "cpc-row";
+          const verifyUrl = `https://worldwide.espacenet.com/patent/cpc-browser#!/CPC=${match.CODE}`;
+          html += `
+            <tr class="${rowClass}">
+              <td><input type="checkbox" onchange="handleCheckboxChange(this, '${match.CODE}', '${match.TYPE}')"></td>
+              <td>${match.CODE}</td>
+              <td>Matched</td>
+              <td>${match.TYPE}</td>
+              <td>${match.LEVEL}</td>
+              <td class="definition-col">${match.DEFINITION}</td>
+              <td><a href="${verifyUrl}" target="_blank" class="verify-link">Verify</a></td>
+            </tr>`;
+        } else {
+          html += `
+            <tr>
+              <td><input type="checkbox" disabled></td>
+              <td>${code}</td>
+              <td>Not Matched</td>
+              <td>—</td>
+              <td>—</td>
+              <td class="definition-col">—</td>
+              <td>—</td>
+            </tr>`;
+        }
+      });
+
+      html += "</table>";
+      document.getElementById("tableBox").innerHTML = html;
+      updateTextAreas();
+    }
+
+    function handleCheckboxChange(cb, code, type) {
+      const list = type === "IPC" ? ipcSelected : cpcSelected;
+      cb.checked ? list.push(code) : list.splice(list.indexOf(code), 1);
+      updateTextAreas();
+    }
+
+    function updateTextAreas() {
+      document.getElementById("ipcBox").value = ipcSelected.join(', ');
+      document.getElementById("cpcBox").value = cpcSelected.join(', ');
+    }
+
+    function copyToClipboard(id) {
+      const el = document.getElementById(id);
+      el.select();
+      document.execCommand("copy");
+    }
+  </script>
+</body>
+</html>
