@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>IPC-CPC Code Extractor & Verifier - Version 2026</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap">
+
+<!--
+  index.html
+  - Place this file in "testing/" folder.
+  - app.js must live alongside it (testing/app.js).
+  - JSON files are expected in the parent: ../database/*.json
+-->
+
+<style>
+/* -------------------------
+   THEME VARIABLES
+   ------------------------- */
+:root{
+  --bg-top: #f7fbf7;
+  --bg-bottom: #eef7ee;
+  --card-bg: rgba(255,255,255,1);
+  --text: #12221a;
+  --muted: #5f6d66;
+  --primary: #2f8a5a;
+  --primary-soft: #7fc59a;
+  --glass-shadow: 0 10px 30px rgba(18,34,26,0.20);
+  --radius: 12px;
+  --glass-blur: blur(8px);
+}
+
+/* Dark & high contrast themes */
+:root[data-theme="dark"]{
+  --bg-top: #0b1112;
+  --bg-bottom: #081012;
+  --card-bg: rgba(10,14,16,0.75);
+  --text: #20863e;
+  --muted: #9fb0a8;
+  --primary: #6fcf97;
+  --primary-soft: #4fbf7f;
+}
+:root[data-theme="dark"] .nav-link {
+  background:linear-gradient(135deg, #6fcf97 0%, #4fbf7f 100%);
+  box-shadow:0 2px 8px rgba(111,207,151,0.25);
+}
+:root[data-theme="dark"] .nav-link:hover {
+  box-shadow:0 4px 12px rgba(111,207,151,0.35);
+}
+:root[data-theme="high-contrast"]{
+  --bg-top:#000;
+  --bg-bottom:#000;
+  --card-bg:#fff;
+  --text:#000;
+  --muted:#222;
+  --primary:#000;
+}
+:root[data-theme="high-contrast"] .nav-link {
+  background:linear-gradient(135deg, #000 0%, #1a1a1a 100%);
+  border:2px solid #fff;
+  color:#fff;
+  box-shadow:0 2px 8px rgba(0,0,0,0.5);
+}
+:root[data-theme="high-contrast"] .nav-link:hover {
+  box-shadow:0 4px 12px rgba(0,0,0,0.7);
+}
+
+/* Base */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color:var(--text);
+  background: linear-gradient(180deg,var(--bg-top) 0%, var(--bg-bottom) 100%);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  padding-top:88px;
+}
+
+/* Container */
+.container{
+  max-width:1100px;
+  margin:0 auto;
+  padding:20px;
+}
+
+/* Top Navigation */
+.top-nav {
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  z-index:3000;
+  background:var(--card-bg);
+  box-shadow: 0 6px 24px rgba(18,34,26,0.14);
+  backdrop-filter: var(--glass-blur);
+  border-bottom:1px solid rgba(47,138,90,0.1);
+}
+.top-nav-inner {
+  max-width:1100px;
+  margin:0 auto;
+  padding:14px 20px;
+  display:flex;
+  gap:20px;
+  align-items:center;
+  justify-content:space-between;
+}
+.top-nav-left {
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.top-nav-right {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-left:auto;
+}
+.nav-link {
+  text-decoration:none;
+  color:#fff;
+  border:none;
+  border-radius:8px;
+  padding:8px 16px;
+  font-size:13px;
+  font-weight:600;
+  background:linear-gradient(135deg, var(--primary) 0%, #197a4f 100%);
+  transition:all .2s ease;
+  box-shadow:0 2px 8px rgba(47,138,90,0.2);
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.nav-link:hover { 
+  transform:translateY(-2px);
+  box-shadow:0 4px 12px rgba(47,138,90,0.3);
+  text-decoration:none;
+}
+.top-nav-right select {
+  padding:8px 12px;
+  border-radius:8px;
+  border:1px solid rgba(47,138,90,0.2);
+  background:var(--card-bg);
+  color:var(--text);
+  font-weight:600;
+  font-size:12px;
+  cursor:pointer;
+  transition:all .2s ease;
+  box-shadow:0 2px 4px rgba(0,0,0,0.05);
+}
+.top-nav-right select:hover {
+  border-color:var(--primary);
+  box-shadow:0 2px 8px rgba(47,138,90,0.15);
+}
+h1 {
+  font-size:1.25rem;
+  margin:0;
+  background:linear-gradient(135deg, var(--primary) 0%, #197a4f 100%);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  font-weight:700;
+}
+.subtitle { 
+  font-size:0.85rem;
+  color:var(--muted);
+  font-weight:500;
+}
+
+/* Cards */
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding:16px;
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--glass-blur);
+  margin-bottom:18px;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.card:hover{ transform: translateY(-3px); }
+
+/* Rows & labels */
+.row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.col { flex:1; min-width:180px; }
+.label { font-weight:600; color:var(--primary); margin-bottom:6px; display:block; }
+
+/* Input textarea */
+textarea#inputString {
+  width:100%;
+  min-height:120px;
+  font-family: monospace;
+  font-size:14px;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid rgba(0,0,0,0.06);
+  background: #fff;
+  color:var(--text);
+  transition: background .18s ease, color .18s ease, border-color .18s ease;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,0.02);
+}
+
+/* Controls & buttons */
+.controls { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.small-btn { padding:8px 10px; background:var(--primary); color:#fff; border:none; border-radius:8px; cursor:pointer }
+.small-btn.secondary { background:#6b7280 }
+.small-btn.ghost { background:transparent; color:var(--text); border:1px solid rgba(0,0,0,0.06) }
+
+/* Switch (iOS style) */
+.switch { position:relative; width:56px; height:32px; display:inline-block; }
+.switch input{display:none}
+.slider{position:absolute;inset:0;background:#d0d6d0;border-radius:999px;transition:.25s}
+.slider:before{content:"";position:absolute;width:26px;height:26px;background:white;border-radius:50%;top:3px;left:3px;transition:.25s;box-shadow:0 4px 10px rgba(0,0,0,0.08)}
+.switch input:checked + .slider{ background:var(--primary-soft) }
+.switch input:checked + .slider:before{ transform:translateX(24px) }
+
+/* Mode badge */
+.mode-badge {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  font-weight:600;
+  color:var(--primary);
+  background: rgba(47,138,90,0.08);
+  padding:6px 10px;
+  border-radius:999px;
+}
+
+/* Formatted codes */
+#formattedStrings { width:100%; min-height:64px; font-family:monospace; padding:10px; border-radius:8px; background:#fff; border:1px solid #eee; color:var(--text) }
+
+/* Table tools */
+.table-tools { display:flex; gap:10px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
+.search-input{ padding:8px 10px; border-radius:8px; border:1px solid #ddd; min-width:220px; }
+.results-title {
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.copy-icon-btn {
+  width:26px;
+  height:26px;
+  border:1px solid rgba(47,138,90,0.22);
+  border-radius:6px;
+  background:rgba(47,138,90,0.08);
+  color:var(--primary);
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+  transition:all .15s ease;
+}
+.copy-icon-btn:hover {
+  background:rgba(47,138,90,0.16);
+  border-color:rgba(47,138,90,0.36);
+}
+.copy-icon-btn.copied {
+  background:var(--primary);
+  color:#fff;
+  border-color:var(--primary);
+  font-weight:700;
+}
+.copy-icon-btn svg {
+  width:15px;
+  height:15px;
+}
+
+/* Table */
+.table-wrap { overflow:auto; border-radius:10px; }
+table.results { width:100%; border-collapse:collapse; min-width:880px }
+.results thead th {
+  color:white; padding:12px; text-align:left; position:sticky; top:0; z-index:2; cursor:pointer;
+  user-select:none; font-weight:700;
+  background: linear-gradient(180deg,var(--primary), #197a4f);
+}
+.results thead th .sort-ind { margin-left:8px; font-size:0.85rem; opacity:0.85 }
+.results tbody td { padding:12px; border-bottom:1px solid rgba(0,0,0,0.04); vertical-align:top; font-size:14px }
+.results tbody tr:hover { background: rgba(76,175,80,0.04) }
+
+/* row classes */
+.ipc-row { background:#eaf7ff }
+.cpc-row { background:#fffaf0 }
+.notmatched { background:#fff0f0 }
+
+/* Verify link */
+a.verify { color:var(--primary); text-decoration:underline }
+a.code-link { color:var(--primary); text-decoration:none; font-weight:600; cursor:pointer; transition:all 0.15s ease }
+a.code-link:hover { text-decoration:underline; opacity:0.8 }
+a.definition-code-link {
+  color:var(--primary);
+  font-weight:700;
+  text-decoration:none;
+  border-radius:4px;
+  padding:0 3px;
+  background:rgba(47,138,90,0.12);
+}
+a.definition-code-link:hover {
+  text-decoration:underline;
+  background:rgba(47,138,90,0.2);
+}
+
+/* Selected boxes */
+.text-box-container { display:flex; gap:16px; margin-top:12px; flex-wrap:wrap }
+.text-box { flex:1; min-width:230px }
+.text-box textarea{ width:100%; min-height:80px; font-family:monospace; padding:10px; border-radius:8px; border:1px solid #eee }
+.selected-panel {
+  width:320px;
+  min-width:280px;
+  border:1px solid rgba(47,138,90,0.15);
+  border-radius:10px;
+  background:linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(247,251,247,0.9) 100%);
+  padding:16px;
+  box-shadow:0 2px 8px rgba(47,138,90,0.08);
+}
+.selected-codes-container .selected-panel {
+  width:100%;
+  min-width:unset;
+  margin-top:0;
+}
+.selected-panel-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:8px;
+}
+.selected-group {
+  margin-top:10px;
+}
+.selected-group-head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font-size:12px;
+  margin-bottom:6px;
+}
+.selected-clear-btn {
+  border:1px solid rgba(0,0,0,0.15);
+  background:transparent;
+  color:var(--text);
+  border-radius:6px;
+  padding:4px 8px;
+  font-size:11px;
+  cursor:pointer;
+}
+.selected-chip-list {
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  min-height:32px;
+}
+.selected-chip {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  border:1px solid rgba(47,138,90,0.2);
+  border-radius:999px;
+  padding:6px 10px;
+  background:linear-gradient(135deg, #eaf7ff 0%, #f0faf8 100%);
+  font-size:12px;
+  font-weight:500;
+  transition:all .15s ease;
+}
+.selected-chip:hover {
+  background:linear-gradient(135deg, #d4f0ff 0%, #dff5f2 100%);
+  border-color:rgba(47,138,90,0.4);
+  box-shadow:0 2px 6px rgba(47,138,90,0.12);
+}
+.selected-chip.dragging {
+  opacity:0.5;
+  border-color:var(--primary);
+  background:linear-gradient(135deg, #b3e5fc 0%, #c8eae6 100%);
+  box-shadow:0 4px 12px rgba(47,138,90,0.25);
+  transform:scale(1.02);
+}
+.selected-chip.drag-over {
+  border:2px dashed var(--primary);
+  background:linear-gradient(135deg, #c8eae6 0%, #a5d6fc 100%);
+  box-shadow:inset 0 0 8px rgba(47,138,90,0.15);
+}
+.selected-chip.drag-over-before {
+  border-left-width:4px;
+  border-left-color:#197a4f;
+}
+.selected-chip.drag-over-after {
+  border-right-width:4px;
+  border-right-color:#197a4f;
+}
+.selected-chip-list.drag-over {
+  outline:2px dashed #197a4f;
+  outline-offset:2px;
+}
+
+.selected-chip-code {
+  border:none;
+  background:transparent;
+  color:var(--primary);
+  font-family:monospace;
+  cursor:pointer;
+  padding:0;
+  font-weight:600;
+}
+.selected-chip-code:hover {
+  opacity:0.7;
+}
+.selected-chip-remove {
+  border:none;
+  border-radius:4px;
+  width:20px;
+  height:20px;
+  padding:0;
+  background:rgba(220,38,38,0.1);
+  color:#dc2626;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  transition:all .15s ease;
+}
+.selected-chip-remove:hover {
+  background:rgba(220,38,38,0.2);
+  color:#991b1b;
+}
+.selected-empty {
+  color:var(--muted);
+  font-size:12px;
+}
+
+/* muted footer */
+.muted { color:var(--muted); font-size:13px; margin-top:10px }
+
+/* FABs */
+.fabs {
+  position:fixed; right:18px; bottom:18px; display:flex; flex-direction:column; gap:12px; z-index:999;
+}
+.fab {
+  width:56px;height:56px;border-radius:999px;background:var(--primary); color:white; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 30px rgba(0,0,0,0.12); cursor:pointer; border:none; transition:transform .15s;
+}
+.fab:hover { transform:translateY(-6px); }
+
+/* loader */
+.loader-overlay {
+  position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.12); z-index:9999; visibility:hidden; opacity:0; transition:opacity .18s;
+}
+.loader-overlay.visible { visibility:visible; opacity:1 }
+.loader {
+  width:96px;height:96px;border-radius:18px;background:var(--card-bg);display:flex;align-items:center;justify-content:center;box-shadow:var(--glass-shadow);backdrop-filter:var(--glass-blur);
+}
+.spinner {
+  width:52px;height:52px;border-radius:50%;
+  border:6px solid rgba(0,0,0,0.06);
+  border-top-color:var(--primary);
+  animation:spin 1s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Responsive */
+@media (max-width:640px){
+  body { padding-top:110px; }
+  .top-nav-inner { flex-direction:column; align-items:flex-start; gap:8px; }
+  .top-nav-right { width:100%; justify-content:flex-start; margin-left:0; gap:8px; flex-wrap:wrap; }
+  .top-nav-left h1{ font-size:1rem }
+  .table-tools { flex-direction:column; align-items:stretch }
+  .fab { width:48px;height:48px }
+  .selected-panel { width:100%; min-width:0; }
+  .selected-codes-container .selected-panel { width:100%; }
+  .nav-link { padding:6px 12px; font-size:11px; }
+  .top-nav-right select { padding:6px 8px; font-size:11px; }
+}
+
+/* -------------------------
+   HIGH CONTRAST INPUT FIX
+   Ensures visible text/background in high-contrast theme
+   ------------------------- */
+:root[data-theme="high-contrast"] textarea#inputString,
+:root[data-theme="high-contrast"] #formattedStrings,
+:root[data-theme="high-contrast"] .text-box textarea,
+:root[data-theme="high-contrast"] .selected-panel {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 2px solid #000 !important;
+}
+
+:root[data-theme="high-contrast"] textarea::placeholder {
+  color: #444 !important;
+}
+
+/* -------------------------
+   HIERARCHY MODAL STYLES
+   ------------------------- */
+.hierarchy-modal {
+  position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.3); z-index:9998; visibility:hidden; opacity:0; transition:opacity .2s;
+}
+.hierarchy-modal.visible { visibility:visible; opacity:1 }
+.hierarchy-content {
+  background:var(--card-bg); border-radius:14px; max-width:800px; width:90%; max-height:80vh; overflow:hidden; display:flex; flex-direction:column; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.hierarchy-header {
+  padding:16px 20px; border-bottom:1px solid rgba(0,0,0,0.08); display:flex; justify-content:space-between; align-items:center;
+}
+.hierarchy-header h2 { margin:0; font-size:1.1rem; color:var(--primary) }
+.hierarchy-close-btn { background:none; border:none; font-size:20px; color:var(--muted); cursor:pointer; padding:0; width:28px; height:28px; display:flex; align-items:center; justify-content:center }
+.hierarchy-close-btn:hover { color:var(--text) }
+.hierarchy-group-links {
+  display:flex;
+  gap:6px;
+  align-items:center;
+  justify-content:center;
+  flex:1;
+  flex-wrap:wrap;
+  padding:0 10px;
+}
+.hierarchy-group-link {
+  border:1px solid rgba(0,0,0,0.18);
+  background:#fff;
+  color:var(--text);
+  border-radius:999px;
+  font-size:11px;
+  font-weight:700;
+  padding:3px 8px;
+  cursor:pointer;
+  min-width:24px;
+}
+.hierarchy-group-link.active {
+  background:var(--primary);
+  border-color:var(--primary);
+  color:#fff;
+}
+.hierarchy-body { overflow-y:auto; padding:20px; flex:1; }
+.hierarchy-container { display:flex; flex-direction:column; gap:16px; }
+.hierarchy-section { font-size:13px; line-height:1.6; }
+.hierarchy-label { font-weight:600; color:var(--muted); font-size:11px; text-transform:uppercase; margin-bottom:8px; }
+.hierarchy-item {
+  padding:10px; border-radius:6px; margin:6px 0; cursor:pointer; transition:background .15s;
+  background: rgba(47,138,90,0.08); color:var(--text);
+}
+.hierarchy-item.ipc-bg { background:#c8e6c9; color:#000; font-weight:600; }
+.hierarchy-item.cpc-bg { color:#c62828; font-weight:600; }
+.hierarchy-item.current { background:var(--primary); color:white; font-weight:600; border:2px solid #197a4f; }
+.hierarchy-item.child { background:rgba(255,152,0,0.1); }
+.hierarchy-item.child:hover { background:rgba(255,152,0,0.2); }
+.hierarchy-item-code { font-family:monospace; font-weight:700; display:inline; margin-right:8px; }
+.hierarchy-item-subject { font-size:12px; display:inline; }
+.hierarchy-checkbox { margin-right:10px; cursor:pointer; }
+.hierarchy-controls {
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+.hierarchy-search-input {
+  flex:1;
+  min-width:220px;
+  padding:8px 10px;
+  border-radius:8px;
+  border:1px solid rgba(0,0,0,0.12);
+  font-size:13px;
+}
+.hierarchy-toggle-btn {
+  padding:8px 12px;
+  border-radius:8px;
+  border:1px solid rgba(0,0,0,0.12);
+  background:#fff;
+  color:var(--text);
+  cursor:pointer;
+  font-size:12px;
+  font-weight:600;
+}
+.hierarchy-toggle-btn.active {
+  background:var(--primary);
+  color:#fff;
+  border-color:var(--primary);
+}
+.hierarchy-definition-panel {
+  border:1px solid rgba(0,0,0,0.12);
+  border-radius:8px;
+  padding:10px;
+  margin-bottom:14px;
+  background:#fff;
+}
+.hierarchy-definition-title {
+  font-size:12px;
+  font-weight:700;
+  color:var(--primary);
+  margin-bottom:6px;
+}
+.hierarchy-definition-body {
+  font-size:12px;
+  white-space:pre-wrap;
+  line-height:1.45;
+}
+.hierarchy-empty {
+  font-size:13px;
+  color:var(--muted);
+  padding:10px 0;
+}
+</style>
+</head>
+<body>
+
+<nav class="top-nav" aria-label="Top navigation">
+  <div class="top-nav-inner">
+    <div class="top-nav-left">
+      <h1>IPC-CPC Code Extractor & Verifier</h1>
+      <div class="subtitle">Version 2026</div>
+    </div>
+    <div class="top-nav-right">
+      <a class="nav-link" href="hierarchy.html">📊 Hierarchy Browser</a>
+      <button class="nav-link" id="browseBtn">📁 Browse Sets</button>
+      <label class="label" style="margin:0;font-size:12px">Theme</label>
+      <select id="themeSelect" aria-label="Theme selector">
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+        <option value="high-contrast">High Contrast</option>
+      </select>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- Input Card -->
+  <div class="card" id="inputCard">
+    <div class="row">
+      <div style="flex:1">
+        <label class="label">Mode</label>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="mode-badge" id="modeBadge">
+            <label class="switch" title="Toggle Convert / Extract mode">
+              <input id="modeToggle" type="checkbox">
+              <span class="slider"></span>
+            </label>
+            <div id="modeInfo">Extract Mode</div>
+          </div>
+          <div class="mode-badge" id="definitionModeBadge">
+            <label class="switch" title="Toggle individual / merged definitions">
+              <input id="definitionToggle" type="checkbox">
+              <span class="slider"></span>
+            </label>
+            <div id="definitionInfo">Individual Definition</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="min-width:220px">
+        <label class="label">Quick Actions</label>
+        <div class="controls">
+          <button class="small-btn" id="pasteBtn">Paste</button>
+          <button class="small-btn secondary" id="clearBtn">Clear</button>
+          <button class="small-btn ghost" id="formatBtn">Format</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <label class="label"> </label>
+      <textarea id="inputString" placeholder="paste any text with classification codes"></textarea>
+    </div>
+
+  </div>
+
+  <!-- Formatted Codes Card -->
+  <div class="card" id="formattedCard" style="display:none;">
+    <label class="label">Classifcation Codes Retrieved</label>
+    <textarea id="formattedStrings" readonly></textarea>
+  </div>
+
+  <!-- Results / Table Card -->
+  <div class="card" id="resultsCard" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div>
+        <div class="results-title">
+          <label class="label" style="margin-bottom:0">Results</label>
+          <button class="copy-icon-btn" id="copyResultsBtn" type="button" title="Copy visible results as CODE - DEFINITION" aria-label="Copy visible results">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/>
+              <path d="M5 15V5a2 2 0 0 1 2-2h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="muted" id="resultsCount">-</div>
+      </div>
+
+      <div class="table-tools">
+        <input id="searchInput" class="search-input" placeholder="Search / filter table (code, definition, type)"/>
+        <select id="typeFilter" class="search-input">
+          <option value="">All Types</option>
+          <option value="IPC">IPC</option>
+          <option value="CPC">CPC</option>
+        </select>
+        <button class="small-btn secondary" id="copySelectedBtn" title="Copy selected codes">Copy Selected</button>
+        <button class="small-btn ghost" id="toggleMatchedBtn" title="Show/Hide unmatched">Toggle unmatched</button>
+        <button class="small-btn" id="saveSetBtn" style="display:none;white-space:nowrap">Save Set</button>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="margin-top:12px">
+      <table class="results" id="resultsTable" aria-describedby="resultsCount">
+        <!-- dynamically generated -->
+      </table>
+    </div>
+
+    <div class="selected-codes-container" id="textAreas" style="display:none;margin-top:12px">
+      <div class="selected-panel" id="selectedPanel" style="width:100%;min-width:unset">
+        <div class="selected-panel-header">
+          <label class="label" style="margin:0;font-size:14px">📌 Selected Codes (Browse & Manage)</label>
+
+        </div>
+        <div class="selected-group">
+          <div class="selected-group-head" style="margin-bottom:10px">
+            <strong style="font-size:13px">🔷 IPC Codes</strong>
+            <div style="display:flex;gap:6px">
+              <button class="small-btn ghost" id="copyIpcBtn" style="font-size:11px;padding:4px 8px" title="Copy all IPC codes">Copy IPC</button>
+              <button class="selected-clear-btn" id="clearIpcSelectedBtn" type="button">Remove all</button>
+            </div>
+          </div>
+          <div class="selected-chip-list" id="selectedIpcList" style="min-height:40px;padding:8px;background:rgba(47,138,90,0.03);border-radius:6px"></div>
+        </div>
+        <div class="selected-group">
+          <div class="selected-group-head" style="margin-bottom:10px">
+            <strong style="font-size:13px">🔶 CPC Codes</strong>
+            <div style="display:flex;gap:6px">
+              <button class="small-btn ghost" id="copyCpcBtn" style="font-size:11px;padding:4px 8px" title="Copy all CPC codes">Copy CPC</button>
+              <button class="selected-clear-btn" id="clearCpcSelectedBtn" type="button">Remove all</button>
+            </div>
+          </div>
+          <div class="selected-chip-list" id="selectedCpcList" style="min-height:40px;padding:8px;background:rgba(47,138,90,0.03);border-radius:6px"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="muted">
+    Extract Mode keeps codes exactly as written | Convert Mode tokenizes and normalizes compact 14-digit inputs
+  </div>
+</div>
+
+<!-- Floating Action Buttons -->
+<div class="fabs">
+  <div class="fab-wrap" title="Copy selected codes">
+    <button class="fab" id="fabCopy" aria-label="Copy selected"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="11" height="11" rx="2" stroke="#fff" stroke-width="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></button>
+  </div>
+
+  <div class="fab-wrap" title="Clear selections">
+    <button class="fab" id="fabClear" aria-label="Clear selections"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 6h18" stroke="#fff" stroke-width="2"/><path d="M8 6v12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></button>
+  </div>
+</div>
+
+<!-- Loader overlay -->
+<div class="loader-overlay" id="loaderOverlay" aria-hidden="true">
+  <div class="loader">
+    <div class="spinner" role="status" aria-label="Processing"></div>
+  </div>
+</div>
+
+<!-- Hierarchy Modal -->
+<div class="hierarchy-modal" id="hierarchyModal" role="dialog" aria-labelledby="hierarchyTitle">
+  <div class="hierarchy-content">
+    <div class="hierarchy-header">
+      <h2 id="hierarchyTitle">Code Hierarchy</h2>
+      <div class="hierarchy-group-links" id="hierarchyGroupLinks" aria-label="Classification groups">
+        <button class="hierarchy-group-link" type="button" data-group="A">A</button>
+        <button class="hierarchy-group-link" type="button" data-group="B">B</button>
+        <button class="hierarchy-group-link" type="button" data-group="C">C</button>
+        <button class="hierarchy-group-link" type="button" data-group="D">D</button>
+        <button class="hierarchy-group-link" type="button" data-group="E">E</button>
+        <button class="hierarchy-group-link" type="button" data-group="F">F</button>
+        <button class="hierarchy-group-link" type="button" data-group="G">G</button>
+        <button class="hierarchy-group-link" type="button" data-group="H">H</button>
+        <button class="hierarchy-group-link" type="button" data-group="Y">Y</button>
+      </div>
+      <button class="hierarchy-close-btn" id="hierarchyCloseBtn" aria-label="Close hierarchy">x</button>
+    </div>
+    <div class="hierarchy-body">
+      <div id="hierarchyContainer"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Save Set Modal -->
+<div class="hierarchy-modal" id="saveSetModal" role="dialog" aria-labelledby="saveSetTitle">
+  <div class="hierarchy-content" style="max-width:600px">
+    <div class="hierarchy-header">
+      <h2 id="saveSetTitle">Save Classification Set</h2>
+      <button class="hierarchy-close-btn" id="saveSetCloseBtn" aria-label="Close">x</button>
+    </div>
+    <div class="hierarchy-body" style="padding:20px">
+      <div style="margin-bottom:16px">
+        <label class="label">Set Title (Required)</label>
+        <input id="saveSetTitleInput" type="text" placeholder="e.g., Patent Classification Set #1" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.12);font-size:14px;font-family:inherit">
+      </div>
+      <div style="margin-bottom:16px">
+        <label class="label">Hashtags (comma-separated)</label>
+        <input id="saveSetHashtagsInput" type="text" placeholder="e.g., mechanical, engineering, automotive" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.12);font-size:14px;font-family:inherit">
+      </div>
+      
+      <div style="background:rgba(47,138,90,0.08);padding:12px;border-radius:8px;margin-bottom:16px">
+        <div class="label" style="font-size:12px;margin-bottom:8px">Codes to be saved (Selected only):</div>
+        <div style="font-size:12px;margin-bottom:8px">
+          <strong>IPC:</strong> <span id="saveSetPreviewIpc" style="font-family:monospace;color:var(--primary)">-</span>
+        </div>
+        <div style="font-size:12px">
+          <strong>CPC:</strong> <span id="saveSetPreviewCpc" style="font-family:monospace;color:var(--primary)">-</span>
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+        <button class="small-btn" id="saveSetConfirmBtn">Save Set</button>
+        <button class="small-btn secondary" id="saveSetCancelBtn">Cancel</button>
+      </div>
+      <div class="muted" id="saveSetMessage"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Browse Sets Modal -->
+<div class="hierarchy-modal" id="browseSetsModal" role="dialog" aria-labelledby="browseSetsTitle">
+  <div class="hierarchy-content" style="max-width:1400px;width:95%">
+    <div class="hierarchy-header">
+      <h2 id="browseSetsTitle">Browse Classification Sets</h2>
+      <button class="hierarchy-close-btn" id="browseSetsCloseBtn" aria-label="Close">x</button>
+    </div>
+    <div class="hierarchy-body" style="padding:20px">
+      <div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+        <div style="flex:1;min-width:220px">
+          <label class="label">Search by Title or Hashtags</label>
+          <input id="browseSetsSearch" type="text" placeholder="Search..." style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.12);font-size:14px;font-family:inherit">
+        </div>
+        <button class="small-btn secondary" id="browseSetsRefreshBtn">Refresh</button>
+        <button class="small-btn ghost" id="browseSetsExportBtn">Export All</button>
+        <button class="small-btn ghost" id="browseSetsImportBtn">Import</button>
+      </div>
+      <div class="table-wrap" style="margin-top:12px;max-height:600px;overflow-y:auto">
+        <table class="results" id="browseSetsTable" style="width:100%;font-size:13px">
+          <thead>
+            <tr>
+              <th style="width:250px">Title & Hashtags</th>
+              <th style="width:300px">IPC Codes</th>
+              <th style="width:300px">CPC Codes</th>
+              <th style="width:120px">Created</th>
+              <th style="width:150px">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="browseSetsTableBody">
+            <tr><td colspan="6" style="text-align:center;color:var(--muted)">No sets saved yet</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Set Detail Modal (for editing) -->
+<div class="hierarchy-modal" id="setDetailModal" role="dialog" aria-labelledby="setDetailTitle">
+  <div class="hierarchy-content" style="max-width:800px">
+    <div class="hierarchy-header">
+      <h2 id="setDetailTitle">Edit Classification Set</h2>
+      <button class="hierarchy-close-btn" id="setDetailCloseBtn" aria-label="Close">x</button>
+    </div>
+    <div class="hierarchy-body" style="padding:20px">
+      <div style="margin-bottom:16px">
+        <label class="label">Title</label>
+        <input id="setDetailTitleInput" type="text" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.12);font-size:14px;font-family:inherit">
+      </div>
+      <div style="margin-bottom:16px">
+        <label class="label">Hashtags (comma-separated)</label>
+        <input id="setDetailHashtagsInput" type="text" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.12);font-size:14px;font-family:inherit">
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <label class="label">IPC Codes</label>
+          <textarea id="setDetailIpcInput" style="width:100%;height:80px;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.12);font-family:monospace;font-size:12px"></textarea>
+        </div>
+        <div style="flex:1;min-width:200px">
+          <label class="label">CPC Codes</label>
+          <textarea id="setDetailCpcInput" style="width:100%;height:80px;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.12);font-family:monospace;font-size:12px"></textarea>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="small-btn" id="setDetailSaveBtn">Update Set</button>
+        <button class="small-btn secondary" id="setDetailCancelBtn">Cancel</button>
+        <button class="small-btn" style="background:#dc2626" id="setDetailDeleteBtn">Delete Set</button>
+      </div>
+      <div class="muted" id="setDetailMessage" style="margin-top:10px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden file input for import -->
+<input type="file" id="importFileInput" accept=".json,.txt" style="display:none">
+
+<script src="app.js?v=20260611-copy-results"></script>
+</body>
+</html>

@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>IPC-CPC Hierarchy Browser - Version 2026</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap">
+<style>
+:root{
+  --bg-top:#f7fbf7;
+  --bg-bottom:#eef7ee;
+  --card-bg:rgba(255,255,255,1);
+  --text:#12221a;
+  --muted:#5f6d66;
+  --primary:#2f8a5a;
+  --primary-soft:#7fc59a;
+  --glass-shadow:0 10px 30px rgba(18,34,26,0.20);
+  --radius:12px;
+  --glass-blur:blur(8px);
+}
+
+:root[data-theme="dark"]{
+  --bg-top:#0b1112;
+  --bg-bottom:#081012;
+  --card-bg:rgba(10,14,16,0.75);
+  --text:#dff7e8;
+  --muted:#9fb0a8;
+  --primary:#6fcf97;
+  --primary-soft:#4fbf7f;
+}
+
+:root[data-theme="high-contrast"]{
+  --bg-top:#000;
+  --bg-bottom:#000;
+  --card-bg:#fff;
+  --text:#000;
+  --muted:#222;
+  --primary:#000;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:"Inter","Segoe UI","Helvetica Neue",Arial,sans-serif;
+  color:var(--text);
+  background:linear-gradient(180deg,var(--bg-top) 0%,var(--bg-bottom) 100%);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  padding-top:96px;
+}
+
+.container{
+  max-width:1240px;
+  margin:0 auto;
+  padding:20px;
+}
+
+.top-nav{
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  z-index:3000;
+  background:var(--card-bg);
+  box-shadow:0 6px 24px rgba(18,34,26,0.14);
+  backdrop-filter:var(--glass-blur);
+}
+
+.top-nav-inner{
+  max-width:1240px;
+  margin:0 auto;
+  padding:12px 20px;
+  display:flex;
+  gap:16px;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.top-nav-left{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.top-nav-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-left:auto;
+}
+
+h1{font-size:1.15rem;margin:0}
+.subtitle{font-size:0.9rem;color:var(--muted)}
+
+.nav-link{
+  text-decoration:none;
+  color:var(--primary);
+  border:1px solid rgba(0,0,0,0.12);
+  border-radius:999px;
+  padding:6px 10px;
+  font-size:12px;
+  font-weight:600;
+  background:#fff;
+}
+
+.nav-link.active{
+  background:var(--primary);
+  color:#fff;
+  border-color:var(--primary);
+}
+
+.top-nav-right select{
+  padding:6px 8px;
+  border-radius:8px;
+  border:1px solid rgba(0,0,0,0.15);
+  background:var(--card-bg);
+  color:var(--text);
+}
+
+.card{
+  background:var(--card-bg);
+  border-radius:var(--radius);
+  padding:16px;
+  box-shadow:var(--glass-shadow);
+  backdrop-filter:var(--glass-blur);
+}
+
+.main-layout{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 330px;
+  gap:16px;
+  align-items:start;
+}
+
+.label{
+  font-weight:600;
+  color:var(--primary);
+  margin-bottom:6px;
+  display:block;
+}
+
+.controls-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(220px,1fr));
+  gap:12px;
+}
+
+.controls-grid .wide{
+  grid-column:1/-1;
+}
+
+.inline-row{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
+.search-input{
+  width:100%;
+  padding:8px 10px;
+  border-radius:8px;
+  border:1px solid rgba(0,0,0,0.14);
+  color:var(--text);
+  background:#fff;
+}
+
+.small-btn{
+  padding:8px 12px;
+  background:var(--primary);
+  color:#fff;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:12px;
+  font-weight:600;
+}
+
+.small-btn.secondary{ background:#6b7280; }
+
+.small-btn.ghost{
+  background:transparent;
+  color:var(--text);
+  border:1px solid rgba(0,0,0,0.12);
+}
+.small-btn.ghost.active{
+  background:var(--primary);
+  color:#fff;
+  border-color:var(--primary);
+}
+
+.group-links{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+
+.group-link{
+  border:1px solid rgba(0,0,0,0.18);
+  background:#fff;
+  color:var(--text);
+  border-radius:999px;
+  font-size:11px;
+  font-weight:700;
+  padding:3px 8px;
+  cursor:pointer;
+  min-width:24px;
+}
+
+.group-link.active{
+  background:var(--primary);
+  border-color:var(--primary);
+  color:#fff;
+}
+
+.muted{
+  color:var(--muted);
+  font-size:13px;
+}
+
+.hierarchy-host{
+  margin-top:14px;
+  border-top:1px solid rgba(0,0,0,0.08);
+  padding-top:14px;
+}
+
+.hierarchy-section{ font-size:13px; line-height:1.6; }
+.hierarchy-label{
+  font-weight:600;
+  color:var(--muted);
+  font-size:11px;
+  text-transform:uppercase;
+  margin-bottom:8px;
+}
+
+.hierarchy-item{
+  padding:10px;
+  border-radius:6px;
+  margin:6px 0;
+  cursor:pointer;
+  transition:background .15s;
+  background:rgba(47,138,90,0.08);
+  color:var(--text);
+}
+
+.hierarchy-item.ipc-bg{
+  background:#c8e6c9;
+  color:#000;
+  font-weight:600;
+}
+
+.hierarchy-item.cpc-bg{
+  color:#c62828;
+  font-weight:600;
+}
+
+.hierarchy-item.current{
+  background:var(--primary);
+  color:#fff;
+  font-weight:600;
+  border:2px solid #197a4f;
+}
+
+.hierarchy-item.child{ background:rgba(255,152,0,0.1); }
+.hierarchy-item.child:hover{ background:rgba(255,152,0,0.2); }
+.hierarchy-checkbox{ margin-right:10px; cursor:pointer; }
+.hierarchy-code{
+  font-family:monospace;
+  font-weight:700;
+  margin-right:8px;
+}
+.hierarchy-marker{
+  font-family:monospace;
+  font-weight:700;
+  color:var(--muted);
+  margin-right:10px;
+}
+.hierarchy-subject{
+  font-size:12px;
+  line-height:1.45;
+  vertical-align:middle;
+}
+.hierarchy-empty{
+  font-size:13px;
+  color:var(--muted);
+  padding:10px 0;
+}
+
+.code-meta-panel{
+  margin-top:12px;
+  border:1px solid rgba(0,0,0,0.12);
+  border-radius:10px;
+  padding:10px;
+  background:#fff;
+}
+.code-meta-title{
+  font-size:12px;
+  font-weight:700;
+  color:var(--primary);
+  margin-bottom:6px;
+}
+.code-meta-body{
+  font-size:12px;
+  color:var(--text);
+  white-space:pre-wrap;
+  line-height:1.45;
+}
+
+.selected-panel{
+  position:sticky;
+  top:108px;
+  border:1px solid rgba(0,0,0,0.08);
+}
+
+.selected-chip-list{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  min-height:80px;
+  align-content:flex-start;
+  padding:8px;
+  border:1px solid rgba(0,0,0,0.09);
+  border-radius:10px;
+  background:rgba(240,247,244,0.85);
+}
+
+.selected-chip{
+  display:inline-flex;
+  align-items:center;
+  border:1px solid rgba(0,0,0,0.15);
+  border-radius:999px;
+  padding:4px 8px;
+  background:#f6faf7;
+  font-size:12px;
+  font-family:monospace;
+  transition:all .16s ease;
+}
+
+.selected-chip:hover{
+  transform:scale(1.03);
+  box-shadow:0 2px 10px rgba(0,0,0,0.09);
+}
+
+.selected-chip-link{
+  color:inherit;
+  text-decoration:underline;
+  cursor:pointer;
+  margin-right:6px;
+  font-weight:700;
+}
+
+.selected-chip-remove{
+  border:none;
+  background:transparent;
+  color:currentColor;
+  margin-left:4px;
+  cursor:pointer;
+  font-weight:700;
+  line-height:1;
+  border-radius:50%;
+  width:18px;
+  height:18px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.selected-chip-remove:hover{
+  background:rgba(220,38,38,0.15);
+  color:#dc2626;
+}
+
+.selected-chip.ipc-chip{
+  background:#e5f6ea;
+  border-color:#98d3a8;
+  color:#0f5132;
+}
+
+.selected-chip.cpc-chip{
+  background:#fff2e8;
+  border-color:#f6b890;
+  color:#9a3412;
+}
+
+.selected-empty{
+  color:var(--muted);
+  font-size:12px;
+}
+
+@media (max-width:900px){
+  .main-layout{ grid-template-columns:1fr; }
+  .selected-panel{ position:static; top:auto; }
+}
+
+@media (max-width:640px){
+  body{ padding-top:130px; }
+  .top-nav-inner{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:8px;
+  }
+  .top-nav-right{
+    margin-left:0;
+    width:100%;
+    flex-wrap:wrap;
+  }
+  .controls-grid{
+    grid-template-columns:1fr;
+  }
+}
+</style>
+</head>
+<body>
+
+<nav class="top-nav" aria-label="Top navigation">
+  <div class="top-nav-inner">
+    <div class="top-nav-left">
+      <h1>IPC-CPC Hierarchy Browser</h1>
+      <div class="subtitle">Version 2026</div>
+    </div>
+    <div class="top-nav-right">
+      <a class="nav-link" href="index.html">Extractor</a>
+      <a class="nav-link active" href="hierarchy.html">Hierarchy Browser</a>
+      <label class="label" style="margin:0">Theme</label>
+      <select id="themeSelect" aria-label="Theme selector">
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+        <option value="high-contrast">High Contrast</option>
+      </select>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="main-layout">
+    <div class="card">
+      <div class="controls-grid">
+        <div>
+          <label class="label">Quick Group</label>
+          <div class="group-links" id="groupLinks" aria-label="Classification groups">
+            <button class="group-link" type="button" data-group="A">A</button>
+            <button class="group-link" type="button" data-group="B">B</button>
+            <button class="group-link" type="button" data-group="C">C</button>
+            <button class="group-link" type="button" data-group="D">D</button>
+            <button class="group-link" type="button" data-group="E">E</button>
+            <button class="group-link" type="button" data-group="F">F</button>
+            <button class="group-link" type="button" data-group="G">G</button>
+            <button class="group-link" type="button" data-group="H">H</button>
+            <button class="group-link" type="button" data-group="Y">Y</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="label">Open Code</label>
+          <div class="inline-row">
+            <input id="codeInput" class="search-input" placeholder="Example: A01B1/00 or C07D" />
+            <button id="openCodeBtn" class="small-btn" type="button">Open</button>
+          </div>
+        </div>
+
+        <div class="wide">
+          <label class="label">Filter Current Tree</label>
+          <input id="hierarchySearch" class="search-input" placeholder="Search code or subject in current hierarchy view" />
+        </div>
+
+        <div class="wide inline-row">
+          <button id="toggleChildrenBtn" class="small-btn ghost" type="button">Immediate Children: OFF</button>
+          <button id="showFullDefinitionBtn" class="small-btn ghost" type="button">Full Definition</button>
+          <button id="showNoteBtn" class="small-btn ghost" type="button">Show Note</button>
+          <button id="showWarningBtn" class="small-btn ghost" type="button">Show Warning</button>
+          <div class="muted" id="statusText">Loading classification data...</div>
+        </div>
+      </div>
+
+      <div class="code-meta-panel" id="codeMetaPanel" hidden>
+        <div class="code-meta-title" id="codeMetaTitle"></div>
+        <div class="code-meta-body" id="codeMetaBody"></div>
+      </div>
+
+      <div class="hierarchy-host" id="hierarchyContainer" aria-live="polite"></div>
+    </div>
+
+    <div class="card selected-panel" id="selectedPanel">
+      <label class="label">Selected Codes</label>
+      <div class="selected-chip-list" id="selectedCodeList"></div>
+    </div>
+  </div>
+</div>
+
+<script src="hierarchy-viewer.js"></script>
+</body>
+</html>
